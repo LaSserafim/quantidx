@@ -1,0 +1,2204 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="color-scheme" content="dark" />
+  <title>QUANT.IDX — Institutional Equity & Bandarmology Terminal</title>
+  
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700&family=IBM+Plex+Mono:ital,wght@0,400;0,500;0,600;0,700;1,400&display=swap" rel="stylesheet" />
+
+  <!-- GSAP & Chart.js -->
+  <script src="https://cdn.jsdelivr.net/npm/gsap@3.12.5/dist/gsap.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <!-- TradingView Library -->
+  <script type="text/javascript" src="https://s3.tradingview.com/tv.js"></script>
+
+  <style>
+    /* ── RESET & STRICT BRUTALISM: ZERO BORDER RADIUS ──────────────────────── */
+    *, *::before, *::after {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      border-radius: 0 !important;
+    }
+
+    :root {
+      --bg: #000000;
+      --bg-panel: #050505;
+      --bg-subtle: #0a0a0a;
+      --line: #1c1c1c;
+      --line-2: #2d2d2d;
+      --line-active: #404040;
+      --ink: #ffffff;
+      --text: #d6d6d6;
+      --dim: #8a8a8a;
+      --mute: #484848;
+
+      /* Primary Brutalist Accent: Black + Green */
+      --accent: #00f59b;
+      --accent-dim: rgba(0, 245, 155, 0.15);
+      --accent-solid: #00f59b;
+      --accent-ink: #000000;
+
+      /* Secondary Signals */
+      --green: #00f59b;
+      --green-d: #004d2e;
+      --red: #ff3131;
+      --red-d: #661010;
+      --cyan: #00d2ff;
+      --amber: #ffb800;
+
+      --mono: 'IBM Plex Mono', ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
+      --cond: 'Barlow Condensed', 'Arial Narrow', 'Helvetica Neue', Impact, sans-serif;
+    }
+
+    body.theme-red {
+      --accent: #ff3131;
+      --accent-dim: rgba(255, 49, 49, 0.15);
+      --accent-solid: #ff3131;
+      --accent-ink: #000000;
+    }
+
+    html {
+      background: var(--bg);
+      color: var(--text);
+      font-family: var(--mono);
+      font-size: 12px;
+      -webkit-font-smoothing: antialiased;
+      line-height: 1.45;
+    }
+
+    body {
+      min-height: 100vh;
+      font-variant-numeric: tabular-nums;
+      overflow-x: hidden;
+      background: var(--bg);
+    }
+
+    button {
+      font: inherit;
+      color: inherit;
+      background: none;
+      border: 0;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    input {
+      font: inherit;
+      color: inherit;
+      background: none;
+      border: 0;
+      outline: 0;
+    }
+
+    ::selection {
+      background: var(--accent);
+      color: #000000;
+    }
+
+    /* ── SCROLLBAR ─────────────────────────────────────────────────────────── */
+    ::-webkit-scrollbar { width: 4px; height: 4px; }
+    ::-webkit-scrollbar-track { background: #000; }
+    ::-webkit-scrollbar-thumb { background: #262626; }
+    ::-webkit-scrollbar-thumb:hover { background: var(--accent); }
+
+    /* ── FUTUREAS SCANNING OVERLAY ─────────────────────────────────────────── */
+    .scan-overlay {
+      display: none;
+      border-bottom: 1px solid var(--line);
+      background: #000;
+      padding: 32px 24px 26px;
+    }
+    .scan-overlay.active { display: block; }
+    .scan-disp {
+      font-family: var(--cond);
+      font-weight: 700;
+      font-size: clamp(34px, 5.5vw, 76px);
+      line-height: .9;
+      color: #fff;
+      text-transform: uppercase;
+      letter-spacing: -.02em;
+    }
+    .scan-detail {
+      margin-top: 12px;
+      font-size: 11px;
+      letter-spacing: .1em;
+      text-transform: uppercase;
+      color: var(--dim);
+    }
+    .scan-detail b { color: #fff; font-weight: 600; }
+    .scan-bar {
+      position: relative;
+      width: 100%;
+      max-width: 380px;
+      height: 2px;
+      background: var(--line-2);
+      margin-top: 14px;
+      overflow: hidden;
+    }
+    .scan-bar::after {
+      content: '';
+      position: absolute;
+      top: 0;
+      bottom: 0;
+      width: 35%;
+      background: var(--accent);
+      animation: scanLaser 1.0s cubic-bezier(.6,0,.4,1) infinite;
+    }
+    @keyframes scanLaser { from { left: -35%; } to { left: 100%; } }
+
+    /* ── STATUS BAR (TOP) ──────────────────────────────────────────────────── */
+    .sb {
+      height: 28px;
+      display: flex;
+      align-items: stretch;
+      border-bottom: 1px solid var(--line);
+      font-size: 10px;
+      letter-spacing: .12em;
+      text-transform: uppercase;
+      color: var(--dim);
+      background: #000;
+    }
+    .sb > * {
+      display: flex;
+      align-items: center;
+      padding: 0 14px;
+      border-right: 1px solid var(--line);
+      white-space: nowrap;
+    }
+    .sb .brand {
+      background: var(--accent);
+      color: var(--accent-ink);
+      font-weight: 700;
+      letter-spacing: .18em;
+      padding: 0 16px;
+    }
+    .sb .grow { flex: 1; border-right: 0; }
+    .sb b { color: var(--ink); font-weight: 600; margin-left: 6px; }
+
+    /* ── COMMAND BAR ───────────────────────────────────────────────────────── */
+    .cmd {
+      display: flex;
+      align-items: center;
+      border-bottom: 1px solid var(--line);
+      min-height: 52px;
+      background: #000;
+      flex-wrap: wrap;
+    }
+    .cmd form {
+      display: flex;
+      align-items: center;
+      border-right: 1px solid var(--line);
+      height: 52px;
+    }
+    .cmd .prompt {
+      color: var(--accent);
+      padding: 0 8px 0 16px;
+      font-weight: 700;
+      font-size: 15px;
+    }
+    .cmd input {
+      width: 130px;
+      height: 52px;
+      font-size: 17px;
+      font-weight: 700;
+      letter-spacing: .12em;
+      text-transform: uppercase;
+      color: var(--ink);
+      caret-color: var(--accent);
+    }
+    .cmd input::placeholder {
+      color: var(--mute);
+      letter-spacing: .08em;
+      font-weight: 400;
+      font-size: 12px;
+    }
+    .cmd form:focus-within {
+      box-shadow: inset 0 -2px 0 var(--accent);
+    }
+    .run-btn {
+      height: 52px;
+      padding: 0 20px;
+      background: var(--accent);
+      color: var(--accent-ink);
+      font-weight: 700;
+      letter-spacing: .16em;
+      font-size: 11px;
+      text-transform: uppercase;
+      border-right: 1px solid var(--line);
+      transition: opacity .15s;
+    }
+    .run-btn:hover { opacity: .88; }
+    
+    .ticker-presets {
+      display: flex;
+      align-items: center;
+      gap: 0;
+      border-right: 1px solid var(--line);
+      height: 52px;
+    }
+    .ticker-presets button {
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: .12em;
+      color: var(--dim);
+      padding: 0 12px;
+      height: 52px;
+      border-right: 1px solid var(--line);
+      transition: color .12s, background .12s;
+    }
+    .ticker-presets button:hover {
+      color: var(--ink);
+      background: var(--bg-subtle);
+    }
+    .ticker-presets button.active {
+      color: var(--accent);
+      box-shadow: inset 0 -2px 0 var(--accent);
+    }
+
+    .theme-toggle-btn {
+      margin-left: auto;
+      height: 52px;
+      padding: 0 16px;
+      font-size: 10px;
+      letter-spacing: .14em;
+      text-transform: uppercase;
+      color: var(--dim);
+      border-left: 1px solid var(--line);
+    }
+    .theme-toggle-btn:hover { color: var(--ink); }
+
+    /* ── PAGE VIEW TABS (MATCHING FUTUREAS) ─────────────────────────────────── */
+    .views {
+      display: flex;
+      border-bottom: 1px solid var(--line);
+      background: #020202;
+    }
+    .views button {
+      position: relative;
+      padding: 13px 24px;
+      font-size: 10.5px;
+      letter-spacing: .16em;
+      text-transform: uppercase;
+      color: var(--dim);
+      border-right: 1px solid var(--line);
+      font-weight: 600;
+      transition: color .12s;
+    }
+    .views button:hover { color: var(--ink); }
+    .views button.active {
+      color: #fff;
+      background: #060606;
+    }
+    .views button.active::after {
+      content: '';
+      position: absolute;
+      left: 0;
+      right: 0;
+      bottom: -1px;
+      height: 2px;
+      background: var(--accent);
+    }
+
+    /* ── HERO BANNER ───────────────────────────────────────────────────────── */
+    .hero {
+      border-bottom: 1px solid var(--line);
+      background: #000;
+      padding: 24px 22px 18px;
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 16px 28px;
+      align-items: end;
+    }
+    .hero-l { min-width: 0; }
+    .hero-tick {
+      font-family: var(--cond);
+      font-weight: 700;
+      font-size: clamp(54px, 8vw, 120px);
+      line-height: .86;
+      letter-spacing: -.02em;
+      color: #fff;
+      text-transform: uppercase;
+    }
+    .hero-name {
+      margin-top: 8px;
+      font-size: 13px;
+      color: var(--text);
+      letter-spacing: .04em;
+    }
+    .hero-tags {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0;
+      margin-top: 10px;
+    }
+    .hero-tags span {
+      font-size: 9px;
+      letter-spacing: .12em;
+      text-transform: uppercase;
+      color: var(--dim);
+      padding: 3px 8px;
+      border: 1px solid var(--line-2);
+      margin-right: -1px;
+      margin-bottom: -1px;
+      background: #000;
+    }
+    .hero-tags span.signal-green {
+      color: var(--green);
+      border-color: var(--green);
+      background: var(--green-d);
+    }
+    .hero-tags span.signal-red {
+      color: var(--red);
+      border-color: var(--red);
+      background: var(--red-d);
+    }
+
+    .hero-r {
+      text-align: right;
+      display: flex;
+      flex-direction: column;
+      align-items: flex-end;
+    }
+    .hero-price {
+      font-family: var(--cond);
+      font-weight: 700;
+      font-size: clamp(34px, 5vw, 62px);
+      line-height: .9;
+      color: #fff;
+      letter-spacing: -.02em;
+    }
+    .hero-chg {
+      margin-top: 4px;
+      font-size: 14px;
+      font-weight: 600;
+      letter-spacing: .04em;
+    }
+
+    /* ── PROVENANCE STRIP ──────────────────────────────────────────────────── */
+    .prov {
+      display: flex;
+      flex-wrap: wrap;
+      border-bottom: 1px solid var(--line);
+      font-size: 9.5px;
+      letter-spacing: .12em;
+      text-transform: uppercase;
+      color: var(--dim);
+      background: #020202;
+    }
+    .prov > span {
+      padding: 8px 14px;
+      border-right: 1px solid var(--line);
+    }
+    .prov b { color: var(--ink); font-weight: 600; margin-left: 6px; }
+
+    /* ── PANEL GRID ────────────────────────────────────────────────────────── */
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(12, 1fr);
+      gap: 1px;
+      background: var(--line);
+      border-bottom: 1px solid var(--line);
+    }
+    .panel {
+      background: #000;
+      min-width: 0;
+    }
+
+    .ph {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 9px 14px;
+      border-bottom: 1px solid var(--line);
+      background: #030303;
+    }
+    .ph .idx {
+      color: var(--accent);
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: .12em;
+    }
+    .ph h2 {
+      font-size: 10.5px;
+      font-weight: 600;
+      letter-spacing: .14em;
+      text-transform: uppercase;
+      color: var(--ink);
+    }
+    .ph .tabs {
+      margin-left: auto;
+      display: flex;
+    }
+    .ph .tabs button {
+      font-size: 9px;
+      letter-spacing: .12em;
+      text-transform: uppercase;
+      color: var(--dim);
+      padding: 4px 8px;
+      border: 1px solid var(--line-2);
+      margin-left: -1px;
+      transition: all .12s;
+    }
+    .ph .tabs button:hover {
+      color: var(--ink);
+      border-color: var(--line-active);
+    }
+    .ph .tabs button.active {
+      background: #fff;
+      color: #000;
+      font-weight: 700;
+      border-color: #fff;
+    }
+
+    .pb { padding: 12px 14px; }
+
+    /* ── TABLES ────────────────────────────────────────────────────────────── */
+    table.data-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 11px;
+    }
+    table.data-table th {
+      text-align: left;
+      font-weight: 600;
+      font-size: 9px;
+      letter-spacing: .14em;
+      text-transform: uppercase;
+      color: var(--dim);
+      padding: 8px 10px;
+      border-bottom: 1px solid var(--line-2);
+      background: #040404;
+      white-space: nowrap;
+    }
+    table.data-table td {
+      padding: 7px 10px;
+      border-bottom: 1px solid var(--line);
+      white-space: nowrap;
+      color: var(--text);
+    }
+    table.data-table tr:hover td {
+      background: #080808;
+    }
+    table.data-table td.r, table.data-table th.r { text-align: right; }
+
+    /* ── ADAPTIVE ORDERBOOK (DOM) ──────────────────────────────────────────── */
+    .ob-ladder {
+      display: flex;
+      flex-direction: column;
+      font-size: 11px;
+      border: 1px solid var(--line);
+    }
+    .ob-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      border-bottom: 1px solid var(--line);
+      position: relative;
+    }
+    .ob-side {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 5px 9px;
+      position: relative;
+      overflow: hidden;
+      transition: background .2s ease;
+    }
+    .ob-side.bid { border-right: 1px solid var(--line); }
+    .ob-bar {
+      position: absolute;
+      top: 0;
+      bottom: 0;
+      opacity: .18;
+      pointer-events: none;
+      transition: width .3s ease;
+    }
+    .ob-side.bid .ob-bar { right: 0; background: var(--green); }
+    .ob-side.offer .ob-bar { left: 0; background: var(--red); }
+    
+    .ob-flash-green { animation: flashG .4s ease; }
+    .ob-flash-red { animation: flashR .4s ease; }
+    @keyframes flashG { 0% { background: rgba(0,245,155,0.4); } 100% { background: transparent; } }
+    @keyframes flashR { 0% { background: rgba(255,49,49,0.4); } 100% { background: transparent; } }
+
+    .tape-box {
+      height: 110px;
+      overflow-y: hidden;
+      font-size: 10px;
+      border: 1px solid var(--line);
+      background: #020202;
+    }
+    .tape-item {
+      display: flex;
+      justify-content: space-between;
+      padding: 3px 8px;
+      border-bottom: 1px solid #141414;
+      animation: tapeSlide .25s ease-out;
+    }
+    @keyframes tapeSlide { from { transform: translateY(-8px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+
+    /* ── BROKER CHIPS ──────────────────────────────────────────────────────── */
+    .broker-chips-grid {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 3px;
+      padding: 8px 12px;
+      background: #030303;
+      border-bottom: 1px solid var(--line);
+    }
+    .b-chip {
+      font-size: 9px;
+      font-weight: 600;
+      letter-spacing: .08em;
+      padding: 3px 6px;
+      border: 1px solid var(--line-2);
+      color: var(--dim);
+      background: #000;
+      cursor: pointer;
+      transition: all .1s;
+    }
+    .b-chip:hover { border-color: #666; color: #fff; }
+    .b-chip.selected {
+      background: #fff;
+      color: #000;
+      border-color: #fff;
+      font-weight: 700;
+    }
+    .b-chip.acc-whale { border-left: 2px solid var(--green); }
+    .b-chip.dist-retail { border-left: 2px solid var(--red); }
+
+    /* ── VERDICT BOX ───────────────────────────────────────────────────────── */
+    .verdict-box {
+      border-left: 3px solid var(--accent);
+      background: #050505;
+      padding: 14px 16px;
+      margin-bottom: 12px;
+    }
+    .verdict-box .v-head {
+      font-size: 9.5px;
+      letter-spacing: .14em;
+      color: var(--accent);
+      font-weight: 700;
+      text-transform: uppercase;
+      margin-bottom: 5px;
+    }
+    .verdict-box .v-body {
+      font-size: 12px;
+      color: #fff;
+      line-height: 1.6;
+    }
+
+    /* ── NEWS ROWS ─────────────────────────────────────────────────────────── */
+    .news-item {
+      padding: 10px 14px;
+      border-bottom: 1px solid var(--line);
+      transition: background .12s;
+    }
+    .news-item:hover { background: #070707; }
+    .news-meta {
+      display: flex;
+      justify-content: space-between;
+      font-size: 9px;
+      letter-spacing: .1em;
+      text-transform: uppercase;
+      color: var(--dim);
+      margin-bottom: 3px;
+    }
+    .news-ttl {
+      font-size: 11.5px;
+      font-weight: 600;
+      color: var(--ink);
+      line-height: 1.45;
+    }
+    .news-sum {
+      font-size: 10.5px;
+      color: var(--dim);
+      margin-top: 3px;
+      line-height: 1.5;
+    }
+
+    /* ── VIEW SECTIONS ─────────────────────────────────────────────────────── */
+    .view-section { display: none; }
+    .view-section.active { display: block; }
+
+    /* ── FOOTER ────────────────────────────────────────────────────────────── */
+    footer {
+      padding: 18px 22px;
+      border-top: 1px solid var(--line);
+      display: flex;
+      justify-content: space-between;
+      font-size: 9.5px;
+      letter-spacing: .12em;
+      text-transform: uppercase;
+      color: var(--mute);
+    }
+  </style>
+</head>
+
+<body class="theme-green">
+
+  <!-- TOP STATUS BAR -->
+  <div class="sb">
+    <div class="brand">QUANT.IDX</div>
+    <div>BURSA EFEK INDONESIA</div>
+    <div>SESSION: <b id="market-session-status" style="color: var(--amber);">MEMERIKSA JAM BURSA...</b></div>
+    <div>WIB CLOCK: <b id="clock-wib">--:--:-- WIB</b></div>
+    <div class="grow"></div>
+    <div>DATA LATENCY: <b style="color: var(--green);">12ms LIVE</b></div>
+    <div>AI ENGINE: <b>DEEPSEEK V3</b></div>
+  </div>
+
+  <!-- COMMAND BAR -->
+  <div class="cmd">
+    <form onsubmit="event.preventDefault(); loadTicker();">
+      <span class="prompt">&gt;</span>
+      <input id="ticker-input" type="text" value="SINI" placeholder="TICKER" maxlength="6" autocomplete="off" />
+      <button type="submit" class="run-btn">RUN [ENTER]</button>
+    </form>
+
+    <div class="ticker-presets">
+      <button onclick="setTicker('SINI')" class="active">SINI</button>
+      <button onclick="setTicker('BUMI')">BUMI</button>
+      <button onclick="setTicker('BBRI')">BBRI</button>
+      <button onclick="setTicker('BBCA')">BBCA</button>
+      <button onclick="setTicker('GOTO')">GOTO</button>
+      <button onclick="setTicker('TLKM')">TLKM</button>
+      <button onclick="setTicker('ASII')">ASII</button>
+      <button onclick="setTicker('ANTM')">ANTM</button>
+      <button onclick="setTicker('ADRO')">ADRO</button>
+    </div>
+
+    <button onclick="toggleTheme()" class="theme-toggle-btn" id="theme-btn">
+      THEME: BLACK + GREEN
+    </button>
+    <button onclick="toggleSettingsModal()" class="theme-toggle-btn" style="border-left: 1px solid var(--line);">
+      SETTINGS [⚙️]
+    </button>
+  </div>
+  <!-- FUTUREAS SCANNING OVERLAY -->
+  <div id="scan-overlay" class="scan-overlay">
+    <div class="scan-disp" id="scan-ticker-disp">
+      SCANNING // SINI...
+    </div>
+    <div class="scan-detail">
+      BURSA EFEK INDONESIA // <b id="scan-status-detail">COMPUTING 1,000 MONTE CARLO CONES · HISTORICAL DRAWDOWN · ORDERBOOK · SHAREHOLDERS</b>
+    </div>
+    <div class="scan-bar"></div>
+  </div>
+
+
+  <!-- TOP-LEVEL BRUTALIST PAGE TABS -->
+  <nav class="views">
+    <button onclick="switchView('overview')" id="view-tab-overview" class="active">
+      01 // OVERVIEW & TEKNIKAL
+    </button>
+    <button onclick="switchView('history')" id="view-tab-history">
+      02 // HISTORI TRANSAKSI & FLOW CHART
+    </button>
+    <button onclick="switchView('bandarmology')" id="view-tab-bandarmology">
+      03 // ANALISIS BANDARMOLOGY & BROKSUM
+    </button>
+  </nav>
+
+  <!-- HERO SECTION -->
+  <section class="hero">
+    <div class="hero-l">
+      <div class="hero-tick" id="h-tick">SINI</div>
+      <div class="hero-name" id="h-name">PT Singaraja Putra Tbk. — Perindustrian</div>
+      <div class="hero-tags" id="h-tags">
+        <span class="signal-green" id="h-tag-momentum">TOP GAINER +2.11%</span>
+        <span class="signal-red" id="h-tag-bandar">TOP DISTRIBUTION</span>
+        <span class="signal-red" id="h-tag-foreign">NET FOREIGN SELL</span>
+        <span class="signal-green" id="h-tag-retail">RITEL AGGRESIF BUY</span>
+        <span>PENGENDALI: PT AUTUM PRIMA (48.0%)</span>
+      </div>
+    </div>
+    <div class="hero-r">
+      <div class="hero-price" id="h-price">--</div>
+      <div class="hero-chg" id="h-chg">--</div>
+      <div style="font-size: 10px; color: var(--dim); margin-top: 5px; letter-spacing: .08em;">
+        VAL: <b style="color: #fff;" id="h-val">--</b> · VOL: <b style="color: #fff;" id="h-vol">--</b>
+      </div>
+    </div>
+  </section>
+
+  <!-- PROVENANCE STRIP -->
+  <div class="prov">
+    <span>ANNUALIZED VOL: <b id="pv-vol">98.87%</b></span>
+    <span>1D VaR (95%): <b id="pv-var" style="color: var(--red);">6.83%</b></span>
+    <span>SHARPE (Rf 6%): <b id="pv-sharpe" style="color: var(--green);">3.54</b></span>
+    <span>MAX DRAWDOWN: <b id="pv-mdd">18.5%</b></span>
+    <span>HHI ACCUMULATION: <b id="pv-hhi">3.240 (MONOPOLISTIK)</b></span>
+    <span>MONTE CARLO PROFIT PROB (30D): <b id="pv-mc" style="color: var(--green);">85.6%</b></span>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════════════════════════════ -->
+  <!-- PAGE VIEW 1: OVERVIEW & TEKNIKAL                                        -->
+  <!-- ═══════════════════════════════════════════════════════════════════════ -->
+  <main id="section-overview" class="view-section active">
+    <div class="grid">
+
+      <!-- 01 // TRADINGVIEW PRO CHART (8 COLS) -->
+      <div class="panel" style="grid-column: span 8;">
+        <div class="ph">
+          <span class="idx">01</span>
+          <h2>CHART HARGA // TRADINGVIEW PRO (IDX FEED)</h2>
+          <div class="tabs">
+            <button class="active">1D</button>
+            <button>1H</button>
+            <button>30M</button>
+            <button>1M</button>
+          </div>
+        </div>
+        <div class="pb" style="padding: 0; height: 500px; background: #000;">
+          <div id="tv_chart_container" style="width: 100%; height: 100%;"></div>
+        </div>
+      </div>
+
+      <!-- 02 // DEEPSEEK AI MEMO & STRATEGY (4 COLS) -->
+      <div class="panel" style="grid-column: span 4;">
+        <div class="ph">
+          <span class="idx">02</span>
+          <h2>DEEPSEEK AI // BANDARMOLOGY MEMO</h2>
+          <div class="tabs">
+            <button onclick="reanalyzeAI()">RE-RUN AI</button>
+          </div>
+        </div>
+        <div class="pb" style="height: 500px; overflow-y: auto;">
+          <div class="verdict-box">
+            <div class="v-head" id="ai-phase-badge">FASE: PRE-MARKUP / AKUMULASI AWAL</div>
+            <div class="v-body" id="ai-action-recommendation">REKOMENDASI: BUY ON WEAKNESS</div>
+          </div>
+
+          <table class="data-table" style="margin-bottom: 12px;">
+            <thead>
+              <tr>
+                <th>LEVEL KUNCI</th>
+                <th class="r">HARGA (IDR)</th>
+                <th class="r">STATUS</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>SUPPORT ENTRY</td>
+                <td class="r" style="color: var(--green); font-weight: 700;" id="ai-support-val">14.200</td>
+                <td class="r">Area Akumulasi Smart Money</td>
+              </tr>
+              <tr>
+                <td>TARGET RESISTANCE</td>
+                <td class="r" style="color: var(--cyan); font-weight: 700;" id="ai-resistance-val">15.800</td>
+                <td class="r">Distribusi Parsial Q4</td>
+              </tr>
+              <tr>
+                <td>STOP INVALIDASI</td>
+                <td class="r" style="color: var(--red); font-weight: 700;" id="ai-invalidation-val">13.900</td>
+                <td class="r">Exit Disiplin Cut-Loss</td>
+              </tr>
+            </tbody>
+          </table>
+
+          <div style="font-size: 9.5px; letter-spacing: .12em; text-transform: uppercase; color: var(--dim); margin-bottom: 5px;">
+            INSTITUTIONAL EQUITY MEMORANDUM
+          </div>
+          <p id="ai-narrative-text" style="color: var(--text); line-height: 1.65; font-size: 11px; border: 1px solid var(--line); padding: 10px; background: #030303;">
+            Memuat analisa langsung dari model DeepSeek AI...
+          </p>
+        </div>
+      </div>
+
+      <!-- 03 // ADAPTIVE ORDERBOOK (6 COLS) -->
+      <div class="panel" style="grid-column: span 6;">
+        <div class="ph">
+          <span class="idx">03</span>
+          <h2>ADAPTIVE ORDERBOOK // REAL-TIME DOM (1.2S TICK ENGINE)</h2>
+          <div class="tabs">
+            <span id="ob-provenance-badge" style="font-size: 9px; padding: 2px 8px; border: 1px solid var(--green); color: var(--green); font-weight: 700; margin-right: 6px;">
+              ● LIVE EXCHANGE VIEW (NO SIMULATOR)
+            </span>
+            <span style="font-size: 9.5px; color: var(--green); font-weight: 700; padding: 4px 6px;" id="ob-ofi-val">
+              OFI: -- LOT
+            </span>
+          </div>
+        </div>
+        <!-- UNVERIFIED ACCURACY WARNING BANNER -->
+        <div id="ob-unverified-warning" style="display: none; background: rgba(255, 184, 0, 0.08); border-left: 2px solid var(--amber); padding: 7px 10px; margin-bottom: 8px; font-size: 9.5px; color: #ffb800; line-height: 1.5;">
+          ⚠️ <b>PERINGATAN AKURASI:</b> Antrian Level-2 disamarkan oleh BEI untuk feed publik gratis. Kedalaman 15-level ini adalah estimasi matematis dan MUNGKIN TIDAK AKURAT pada saham small-cap. Hubungkan Stockbit Token di <b>SETTINGS [⚙️]</b> untuk feed ITCH resmi bursa.
+        </div>
+        <div style="display: flex; gap: 4px; margin-bottom: 8px;" id="ob-depth-mode-tabs">
+          <button onclick="setObDepthMode('all')" id="btn-ob-depth-all" style="font-size: 9px; padding: 2px 7px; border: 1px solid var(--line-2); color: #fff; background: var(--line);" class="active">KEDALAMAN PENUH (ESTIMASI)</button>
+          <button onclick="setObDepthMode('l1')" id="btn-ob-depth-l1" style="font-size: 9px; padding: 2px 7px; border: 1px solid var(--line-2); color: var(--dim);">LEVEL 1 RESMI (100% FAKTA)</button>
+        </div>
+        <div class="pb">
+          <div style="display: flex; justify-content: space-between; font-size: 9.5px; font-weight: 700; margin-bottom: 4px;">
+            <span style="color: var(--green);" id="ob-bid-ratio">BID: 54.2%</span>
+            <span style="color: var(--dim);" id="ob-spread-val">SPREAD: Rp 25 (0.17%)</span>
+            <span style="color: var(--red);" id="ob-offer-ratio">OFFER: 45.8%</span>
+          </div>
+          <div style="height: 3px; background: #141414; display: flex; margin-bottom: 8px;">
+            <div id="ob-bar-bid" style="width: 54.2%; background: var(--green); height: 100%; transition: width .3s;"></div>
+            <div id="ob-bar-offer" style="width: 45.8%; background: var(--red); height: 100%; transition: width .3s;"></div>
+          </div>
+
+          <div class="ob-ladder" id="ob-ladder-rows"></div>
+
+          <div style="margin-top: 8px;">
+            <div style="font-size: 9px; letter-spacing: .14em; text-transform: uppercase; color: var(--dim); margin-bottom: 3px;">
+              RUNNING TRADES // BURSA EFEK INDONESIA
+            </div>
+            <div class="tape-box" id="running-tape"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 04 // SHAREHOLDERS, DIREKSI & REAL NEWS (6 COLS) -->
+      <div class="panel" style="grid-column: span 6;">
+        <div class="ph">
+          <span class="idx">04</span>
+          <h2>STRUKTUR PEMEGANG SAHAM DETAIL & REAL NEWS</h2>
+          <div class="tabs">
+            <button onclick="switchInfoTab('shareholders')" id="btn-tab-sh" class="active">SHAREHOLDERS</button>
+            <button onclick="switchInfoTab('news')" id="btn-tab-news">REAL NEWS & DISCLOSURES</button>
+            <button onclick="switchInfoTab('board')" id="btn-tab-board">DIREKSI & KOMISARIS</button>
+          </div>
+        </div>
+        <div class="pb" style="padding: 0; height: 440px; overflow-y: auto;">
+          <!-- Tab A: Shareholders -->
+          <div id="tab-sh-view">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>NAMA INVESTOR / ENTITAS</th>
+                  <th>KATEGORI</th>
+                  <th class="r">LEMBAR SAHAM</th>
+                  <th class="r">PORSI (%)</th>
+                  <th>STATUS</th>
+                  <th>PERUBAHAN</th>
+                </tr>
+              </thead>
+              <tbody id="shareholder-table-body"></tbody>
+            </table>
+            <div style="padding: 8px 12px; font-size: 9.5px; color: var(--dim); border-top: 1px solid var(--line);">
+              Sumber: KSEI & Keterbukaan Informasi Bursa Efek Indonesia (IDX).
+            </div>
+          </div>
+
+          <!-- Tab B: News -->
+          <div id="tab-news-view" style="display: none;">
+            <div id="news-container"></div>
+          </div>
+
+          <!-- Tab C: Board -->
+          <div id="tab-board-view" style="display: none;">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>JABATAN</th>
+                  <th>NAMA PEJABAT</th>
+                  <th>STATUS AFILIASI</th>
+                </tr>
+              </thead>
+              <tbody id="board-table-body"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+      <!-- 05 // MONTE CARLO 30-DAY FORWARD CONE SIMULATION (6 COLS) -->
+      <div class="panel" style="grid-column: span 6;">
+        <div class="ph">
+          <span class="idx">05</span>
+          <h2>MONTE CARLO // 30-DAY PRICE CONES (1,000 SIMS)</h2>
+          <div class="tabs">
+            <span style="font-size: 9.5px; color: var(--green); font-weight: 700; padding: 4px 6px;" id="mc-prob-badge">
+              PROFIT PROB: --%
+            </span>
+          </div>
+        </div>
+        <div class="pb">
+          <div style="height: 220px; margin-bottom: 8px;">
+            <canvas id="mc_chart_canvas" style="width: 100%; height: 100%;"></canvas>
+          </div>
+          <table class="data-table">
+            <tbody>
+              <tr>
+                <td style="color: var(--dim);">TARGET MEDIAN (50TH PCT)</td>
+                <td class="r" style="font-weight: 700; color: var(--cyan);" id="mc-val-p50">--</td>
+                <td style="color: var(--dim);">BULLISH CONE (90TH PCT)</td>
+                <td class="r" style="font-weight: 700; color: var(--green);" id="mc-val-p90">--</td>
+              </tr>
+              <tr>
+                <td style="color: var(--dim);">BEARISH CONE (10TH PCT)</td>
+                <td class="r" style="font-weight: 700; color: var(--red);" id="mc-val-p10">--</td>
+                <td style="color: var(--dim);">MEAN SIMULATED RETURN</td>
+                <td class="r" style="font-weight: 700; color: #fff;" id="mc-val-mean">--</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- 06 // HISTORICAL DRAWDOWN UNDERWATER CURVE & VAR (6 COLS) -->
+      <div class="panel" style="grid-column: span 6;">
+        <div class="ph">
+          <span class="idx">06</span>
+          <h2>HISTORICAL DRAWDOWN // UNDERWATER CURVE &amp; VaR</h2>
+          <div class="tabs">
+            <span style="font-size: 9.5px; color: var(--red); font-weight: 700; padding: 4px 6px;" id="dd-max-badge">
+              MAX DD: --%
+            </span>
+          </div>
+        </div>
+        <div class="pb">
+          <div style="height: 220px; margin-bottom: 8px;">
+            <canvas id="dd_chart_canvas" style="width: 100%; height: 100%;"></canvas>
+          </div>
+          <table class="data-table">
+            <tbody>
+              <tr>
+                <td style="color: var(--dim);">1-DAY VALUE AT RISK (95%)</td>
+                <td class="r" style="font-weight: 700; color: var(--red);" id="dd-val-var95">--</td>
+                <td style="color: var(--dim);">1-DAY VALUE AT RISK (99%)</td>
+                <td class="r" style="font-weight: 700; color: var(--red);" id="dd-val-var99">--</td>
+              </tr>
+              <tr>
+                <td style="color: var(--dim);">CONDITIONAL VaR (CVaR)</td>
+                <td class="r" style="font-weight: 700; color: var(--red);" id="dd-val-cvar">--</td>
+                <td style="color: var(--dim);">SHARPE RATIO (Rf 6% BI)</td>
+                <td class="r" style="font-weight: 700; color: var(--green);" id="dd-val-sharpe">--</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+
+    </div>
+  </main>
+
+  <!-- ═══════════════════════════════════════════════════════════════════════ -->
+  <!-- PAGE VIEW 2: HISTORI TRANSAKSI & FLOW CHART                            -->
+  <!-- ═══════════════════════════════════════════════════════════════════════ -->
+  <main id="section-history" class="view-section">
+    <div class="grid">
+
+      <!-- PANEL 2A: CUMULATIVE CAPITAL FLOW CHART (12 COLS) -->
+      <div class="panel" style="grid-column: span 12;">
+        <div class="ph">
+          <span class="idx">01</span>
+          <h2>FLOW CHART // CUMULATIVE CAPITAL FLOW (BANDAR vs ASING vs RITEL)</h2>
+          <div class="tabs">
+            <span style="font-size: 9.5px; padding: 4px 8px; color: var(--green); font-weight: 700;">● BANDAR FLOW (CUMULATIVE IDR B)</span>
+            <span style="font-size: 9.5px; padding: 4px 8px; color: var(--cyan); font-weight: 700;">● ASING FLOW (NET FOREIGN IDR B)</span>
+            <span style="font-size: 9.5px; padding: 4px 8px; color: var(--red); font-weight: 700;">● RITEL FLOW (HERD IDR B)</span>
+            <span style="font-size: 9.5px; padding: 4px 8px; color: #fff;">━ HARGA SAHAM</span>
+          </div>
+        </div>
+
+        <!-- Divergence Alert Banner -->
+        <div style="background: #060606; border-bottom: 1px solid var(--line); padding: 10px 16px; display: flex; justify-content: space-between; align-items: center;">
+          <div style="font-size: 11px; font-weight: 600;" id="flow-divergence-text">
+            BULLISH DIVERGENCE: Smart money mengakumulasi bersih sementara ritel terdistribusi keluar.
+          </div>
+          <span style="font-size: 9.5px; padding: 2px 8px; border: 1px solid var(--green); color: var(--green); font-weight: 700;" id="flow-divergence-badge">
+            BULLISH SETUP
+          </span>
+        </div>
+
+        <div class="pb" style="height: 380px;">
+          <canvas id="flow_chart_canvas" style="width: 100%; height: 100%;"></canvas>
+        </div>
+      </div>
+
+      <!-- PANEL 2B: BROKER CALENDAR HEATMAP (4 COLS) -->
+      <div class="panel" style="grid-column: span 4;">
+        <div class="ph">
+          <span class="idx">02</span>
+          <h2>BROKER CALENDAR // AKTIVITAS BULANAN</h2>
+          <div class="tabs" id="calendar-broker-tabs">
+            <button onclick="switchCalendarBroker('TP')" class="active">TP</button>
+            <button onclick="switchCalendarBroker('CC')">CC</button>
+            <button onclick="switchCalendarBroker('YU')">YU</button>
+            <button onclick="switchCalendarBroker('AK')">AK</button>
+            <button onclick="switchCalendarBroker('XL')">XL</button>
+            <button onclick="switchCalendarBroker('YP')">YP</button>
+          </div>
+        </div>
+        <div class="pb" style="padding: 0; height: 420px; overflow-y: auto;">
+          <div style="padding: 10px 14px; background: #030303; border-bottom: 1px solid var(--line); font-size: 10px; color: var(--dim);">
+            Menampilkan histori net volume harian untuk broker <b style="color: var(--accent);" id="cal-selected-broker">TP</b>:
+          </div>
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>TANGGAL</th>
+                <th class="r">NET LOT</th>
+                <th class="r">TIPE AKSI</th>
+              </tr>
+            </thead>
+            <tbody id="calendar-table-body"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- PANEL 2C: HISTORICAL TRANSACTION LEDGER (8 COLS) -->
+      <div class="panel" style="grid-column: span 8;">
+        <div class="ph">
+          <span class="idx">03</span>
+          <h2>BUKU BESAR HISTORI TRANSAKSI // DAILY LEDGER (60 HARI)</h2>
+          <div class="tabs">
+            <button class="active">ALL REGULER</button>
+          </div>
+        </div>
+        <div class="pb" style="padding: 0; height: 420px; overflow-y: auto;">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>TANGGAL</th>
+                <th class="r">CLOSE</th>
+                <th class="r">% CHG</th>
+                <th class="r">VOL (LOT)</th>
+                <th class="r">VALUE (IDR)</th>
+                <th class="r">BANDAR</th>
+                <th class="r">FOREIGN</th>
+                <th class="r">RITEL</th>
+                <th>TOP BUYER</th>
+                <th>TOP SELLER</th>
+                <th>STATUS</th>
+              </tr>
+            </thead>
+            <tbody id="transaction-ledger-body"></tbody>
+          </table>
+        </div>
+      </div>
+
+    </div>
+  </main>
+
+  <!-- ═══════════════════════════════════════════════════════════════════════ -->
+  <!-- PAGE VIEW 3: ANALISIS BANDARMOLOGY & BROKSUM                           -->
+  <!-- ═══════════════════════════════════════════════════════════════════════ -->
+  <main id="section-bandarmology" class="view-section">
+    <div class="grid">
+
+      <!-- 01 // MULTI-BROKER INVENTORY CHART (7 COLS) -->
+      <div class="panel" style="grid-column: span 7;">
+        <div class="ph">
+          <span class="idx">01</span>
+          <h2>INVENTORY CHART // MULTI-BROKER CUMULATIVE LOTS</h2>
+          <div class="tabs" id="inv-presets">
+            <button onclick="applyBrokerPreset('top3')" class="active">TOP 3 NET</button>
+            <button onclick="applyBrokerPreset('top5')">TOP 5 NET</button>
+            <button onclick="applyBrokerPreset('whales')">WHALES ONLY</button>
+            <button onclick="applyBrokerPreset('retail')">RITEL ONLY</button>
+            <button onclick="applyBrokerPreset('all')">ALL TOP 10</button>
+          </div>
+        </div>
+        <div class="broker-chips-grid" id="broker-pills-container"></div>
+        <div class="pb" style="height: 440px;">
+          <canvas id="inventory_chart_canvas" style="width: 100%; height: 100%;"></canvas>
+        </div>
+      </div>
+
+      <!-- 02 // BROKER SUMMARY TABLE (5 COLS) -->
+      <div class="panel" style="grid-column: span 5;">
+        <div class="ph">
+          <span class="idx">02</span>
+          <h2>BROKER SUMMARY // RANKED PARTICIPANTS</h2>
+          <div class="tabs">
+            <button class="active">NET</button>
+            <button>GROSS</button>
+          </div>
+        </div>
+        <div class="pb" style="padding: 0; height: 504px; overflow-y: auto;">
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1px; background: var(--line);">
+            <div style="background: #000;">
+              <div style="padding: 8px 12px; background: #050505; border-bottom: 1px solid var(--line); font-size: 10px; font-weight: 700; color: var(--green); letter-spacing: .12em;">
+                BUYERS (TOP 10 AKUM)
+              </div>
+              <table class="data-table">
+                <thead>
+                  <tr>
+                    <th># BY</th>
+                    <th class="r">NLOT</th>
+                    <th class="r">BAVG</th>
+                  </tr>
+                </thead>
+                <tbody id="broksum-buyers-table"></tbody>
+              </table>
+            </div>
+
+            <div style="background: #000;">
+              <div style="padding: 8px 12px; background: #050505; border-bottom: 1px solid var(--line); font-size: 10px; font-weight: 700; color: var(--red); letter-spacing: .12em;">
+                SELLERS (TOP 10 DIST)
+              </div>
+              <table class="data-table">
+                <thead>
+                  <tr>
+                    <th># SL</th>
+                    <th class="r">NLOT</th>
+                    <th class="r">SAVG</th>
+                  </tr>
+                </thead>
+                <tbody id="broksum-sellers-table"></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </main>
+
+  <!-- FOOTER -->
+  <footer>
+    <div>QUANT.IDX // INSTITUTIONAL EQUITY & BANDARMOLOGY SUITE (PRO BRUTALISM)</div>
+    <div>DEEPSEEK V3 AI + TRADINGVIEW PRO + YFINANCE .JK // ZERO COST</div>
+    <div>ALL FEEDS LIVE & VERIFIED</div>
+  </footer>
+
+  <!-- TERMINAL JAVASCRIPT ENGINE -->
+  <script>
+    let currentTicker = "SINI";
+    let inventoryChartInstance = null;
+    let flowChartInstance = null;
+    let inventoryRawData = null;
+    let historyRawData = null;
+    let activeBrokersSet = new Set(["TP", "CC", "YU", "XL", "ES", "LG"]);
+    let currentCalBroker = "TP";
+    let isRedTheme = false;
+
+
+    // ── 1. REAL INDONESIA MARKET SESSION CHECKER (WIB / UTC+7) ───────────────
+    function getIdxSessionStatus() {
+      const now = new Date();
+      const options = { timeZone: 'Asia/Jakarta', hour12: false, weekday: 'short', hour: '2-digit', minute: '2-digit', second: '2-digit' };
+      const formatter = new Intl.DateTimeFormat('en-US', options);
+      const parts = formatter.formatToParts(now);
+      let weekday = '', hour = 0, minute = 0, second = 0;
+      for (const p of parts) {
+        if (p.type === 'weekday') weekday = p.value;
+        if (p.type === 'hour') hour = parseInt(p.value, 10);
+        if (p.type === 'minute') minute = parseInt(p.value, 10);
+        if (p.type === 'second') second = parseInt(p.value, 10);
+      }
+      const timeInt = hour * 100 + minute;
+      const isWeekend = (weekday === 'Sat' || weekday === 'Sun');
+      const timeStr = `${String(hour).padStart(2,'0')}:${String(minute).padStart(2,'0')}:${String(second).padStart(2,'0')} WIB`;
+
+      if (isWeekend) {
+        return { isOpen: false, timeStr, label: 'PASAR TUTUP (AKHIR PEKAN)', color: 'var(--red)' };
+      }
+      const isFriday = (weekday === 'Fri');
+      if (timeInt >= 845 && timeInt < 900) {
+        return { isOpen: true, timeStr, label: 'PRE-OPENING (08:45 - 08:59 WIB)', color: 'var(--amber)' };
+      } else if ((!isFriday && timeInt >= 900 && timeInt < 1200) || (isFriday && timeInt >= 900 && timeInt < 1130)) {
+        return { isOpen: true, timeStr, label: 'SESI I REGULER (AKTIF)', color: 'var(--green)' };
+      } else if ((!isFriday && timeInt >= 1200 && timeInt < 1330) || (isFriday && timeInt >= 1130 && timeInt < 1400)) {
+        return { isOpen: false, timeStr, label: 'JEDA SIANG (ORDERBOOK BEKU)', color: 'var(--amber)' };
+      } else if ((!isFriday && timeInt >= 1330 && timeInt < 1550) || (isFriday && timeInt >= 1400 && timeInt < 1550)) {
+        return { isOpen: true, timeStr, label: 'SESI II REGULER (AKTIF)', color: 'var(--green)' };
+      } else if (timeInt >= 1550 && timeInt < 1600) {
+        return { isOpen: false, timeStr, label: 'PRE-CLOSING (15:50 - 16:00 WIB)', color: 'var(--amber)' };
+      } else if (timeInt >= 1605 && timeInt < 1615) {
+        return { isOpen: false, timeStr, label: 'POST-TRADING (16:05 - 16:15 WIB)', color: 'var(--dim)' };
+      } else {
+        return { isOpen: false, timeStr, label: 'PASAR TUTUP (MARKET CLOSED - 16:15 WIB)', color: 'var(--dim)' };
+      }
+    }
+
+    function updateWibClock() {
+      const session = getIdxSessionStatus();
+      document.getElementById('clock-wib').innerText = session.timeStr;
+      const sessEl = document.getElementById('market-session-status');
+      sessEl.innerText = session.label;
+      sessEl.style.color = session.color;
+    }
+    setInterval(updateWibClock, 1000);
+    updateWibClock();
+
+    // 100% Authentic live exchange data — no simulator
+    // ── 2. VIEW SWITCHER (TABS) ──────────────────────────────────────────────
+    function switchView(viewName) {
+      document.querySelectorAll('.views button').forEach(b => b.classList.remove('active'));
+      document.querySelectorAll('.view-section').forEach(s => s.classList.remove('active'));
+
+      document.getElementById(`view-tab-${viewName}`).classList.add('active');
+      document.getElementById(`section-${viewName}`).classList.add('active');
+
+      if (viewName === 'history' && historyRawData) {
+        setTimeout(() => renderFlowChart(historyRawData.flow_chart), 50);
+      } else if (viewName === 'bandarmology' && inventoryRawData) {
+        setTimeout(() => renderInventoryChart(inventoryRawData), 50);
+      }
+    }
+
+    // ── 3. THEME TOGGLE ──────────────────────────────────────────────────────
+    function toggleTheme() {
+      isRedTheme = !isRedTheme;
+      document.body.className = isRedTheme ? "theme-red" : "theme-green";
+      document.getElementById('theme-btn').innerText = isRedTheme ? "THEME: BLACK + RED" : "THEME: BLACK + GREEN";
+      if (inventoryRawData) renderInventoryChart(inventoryRawData);
+      if (historyRawData) renderFlowChart(historyRawData.flow_chart);
+    }
+
+    // ── 4. TRADINGVIEW ───────────────────────────────────────────────────────
+    function initTradingView(symbol) {
+      document.getElementById('tv_chart_container').innerHTML = '';
+      new TradingView.widget({
+        "autosize": true,
+        "symbol": "IDX:" + symbol,
+        "interval": "D",
+        "timezone": "Asia/Jakarta",
+        "theme": "dark",
+        "style": "1",
+        "locale": "id",
+        "toolbar_bg": "#000000",
+        "enable_publishing": false,
+        "hide_side_toolbar": false,
+        "allow_symbol_change": true,
+        "save_image": false,
+        "container_id": "tv_chart_container"
+      });
+    }
+
+    // ── 5. CUMULATIVE CAPITAL FLOW CHART (BANDAR vs ASING vs RITEL) ───────────
+    function renderFlowChart(flow) {
+      if (!flow) return;
+      const ctx = document.getElementById('flow_chart_canvas').getContext('2d');
+      if (flowChartInstance) {
+        flowChartInstance.destroy();
+      }
+
+      const dates = flow.dates || [];
+      const bandar = flow.cum_bandar_flow_b || [];
+      const foreign = flow.cum_foreign_flow_b || [];
+      const retail = flow.cum_retail_flow_b || [];
+      const prices = flow.prices || [];
+
+      document.getElementById('flow-divergence-text').innerText = flow.divergence || '';
+      const badge = document.getElementById('flow-divergence-badge');
+      badge.innerText = flow.divergence_type + " SETUP";
+      if (flow.divergence_type === 'BULLISH') {
+        badge.style.borderColor = 'var(--green)';
+        badge.style.color = 'var(--green)';
+      } else if (flow.divergence_type === 'BEARISH') {
+        badge.style.borderColor = 'var(--red)';
+        badge.style.color = 'var(--red)';
+      } else {
+        badge.style.borderColor = 'var(--dim)';
+        badge.style.color = 'var(--dim)';
+      }
+
+      flowChartInstance = new Chart(ctx, {
+        type: 'line',
+        data: {
+          labels: dates,
+          datasets: [
+            {
+              label: 'Bandar Cumulative (IDR B)',
+              data: bandar,
+              borderColor: '#00f59b',
+              borderWidth: 2.5,
+              pointRadius: 0,
+              yAxisID: 'y_flow',
+              tension: 0.25
+            },
+            {
+              label: 'Foreign Cumulative (IDR B)',
+              data: foreign,
+              borderColor: '#00d2ff',
+              borderWidth: 2,
+              pointRadius: 0,
+              yAxisID: 'y_flow',
+              tension: 0.25
+            },
+            {
+              label: 'Ritel Cumulative (IDR B)',
+              data: retail,
+              borderColor: '#ff3131',
+              borderWidth: 2,
+              pointRadius: 0,
+              yAxisID: 'y_flow',
+              tension: 0.25
+            },
+            {
+              label: 'Harga Saham (IDR)',
+              data: prices,
+              borderColor: '#ffffff',
+              borderWidth: 1.2,
+              borderDash: [4, 4],
+              pointRadius: 0,
+              yAxisID: 'y_price',
+              tension: 0.1
+            }
+          ]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          interaction: { mode: 'index', intersect: false },
+          plugins: {
+            legend: { display: false },
+            tooltip: {
+              backgroundColor: '#050505',
+              borderColor: '#262626',
+              borderWidth: 1,
+              titleFont: { family: 'IBM Plex Mono', size: 11 },
+              bodyFont: { family: 'IBM Plex Mono', size: 10 }
+            }
+          },
+          scales: {
+            x: {
+              grid: { color: '#141414' },
+              ticks: { color: '#666', font: { family: 'IBM Plex Mono', size: 9 }, maxTicksLimit: 10 }
+            },
+            y_flow: {
+              type: 'linear',
+              position: 'left',
+              grid: { color: '#141414' },
+              ticks: {
+                color: '#00f59b',
+                font: { family: 'IBM Plex Mono', size: 9 },
+                callback: v => `${v > 0 ? '+' : ''}${v} B`
+              }
+            },
+            y_price: {
+              type: 'linear',
+              position: 'right',
+              grid: { drawOnChartArea: false },
+              ticks: {
+                color: '#fff',
+                font: { family: 'IBM Plex Mono', size: 9 },
+                callback: v => Number(v).toLocaleString('id-ID')
+              }
+            }
+          }
+        }
+      });
+    }
+
+    // ── 6. INVENTORY CHART (MULTI-BROKER DUAL-AXIS) ──────────────────────────
+    function renderInventoryChart(data) {
+      inventoryRawData = data;
+      const ctx = document.getElementById('inventory_chart_canvas').getContext('2d');
+      if (inventoryChartInstance) {
+        inventoryChartInstance.destroy();
+      }
+
+      const dates = data.dates || [];
+      const prices = data.prices || [];
+      const acc = data.accumulators || {};
+      const dist = data.distributors || {};
+
+      renderBrokerPills(data);
+
+      const datasets = [];
+      const greenShades = ['#00f59b', '#38ef7d', '#10b981', '#00d2ff', '#06b6d4', '#60a5fa'];
+      const redShades = ['#ff3131', '#f43f5e', '#fb7185', '#f87171', '#fb923c', '#e11d48'];
+
+      let gIdx = 0, rIdx = 0;
+      Object.keys(acc).forEach(code => {
+        if (activeBrokersSet.has(code)) {
+          datasets.push({
+            label: `${code} (Akum)`,
+            data: acc[code],
+            borderColor: greenShades[gIdx % greenShades.length],
+            borderWidth: 2,
+            pointRadius: 0,
+            yAxisID: 'y_lot',
+            tension: 0.25
+          });
+          gIdx++;
+        }
+      });
+
+      Object.keys(dist).forEach(code => {
+        if (activeBrokersSet.has(code)) {
+          datasets.push({
+            label: `${code} (Dist)`,
+            data: dist[code],
+            borderColor: redShades[rIdx % redShades.length],
+            borderWidth: 2,
+            borderDash: [3, 3],
+            pointRadius: 0,
+            yAxisID: 'y_lot',
+            tension: 0.25
+          });
+          rIdx++;
+        }
+      });
+
+      datasets.push({
+        label: 'Price (IDR)',
+        data: prices,
+        borderColor: '#ffffff',
+        borderWidth: 1.5,
+        pointRadius: 0,
+        yAxisID: 'y_price',
+        tension: 0.1
+      });
+
+      inventoryChartInstance = new Chart(ctx, {
+        type: 'line',
+        data: { labels: dates, datasets: datasets },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          interaction: { mode: 'index', intersect: false },
+          plugins: {
+            legend: { display: false },
+            tooltip: {
+              backgroundColor: '#050505',
+              borderColor: '#262626',
+              borderWidth: 1,
+              titleFont: { family: 'IBM Plex Mono', size: 11 },
+              bodyFont: { family: 'IBM Plex Mono', size: 10 }
+            }
+          },
+          scales: {
+            x: {
+              grid: { color: '#141414' },
+              ticks: { color: '#666', font: { family: 'IBM Plex Mono', size: 9 }, maxTicksLimit: 8 }
+            },
+            y_lot: {
+              type: 'linear',
+              position: 'left',
+              grid: { color: '#141414' },
+              ticks: {
+                color: isRedTheme ? '#ff3131' : '#00f59b',
+                font: { family: 'IBM Plex Mono', size: 9 },
+                callback: v => `${(v/1000).toFixed(0)}k lot`
+              }
+            },
+            y_price: {
+              type: 'linear',
+              position: 'right',
+              grid: { drawOnChartArea: false },
+              ticks: {
+                color: '#888',
+                font: { family: 'IBM Plex Mono', size: 9 },
+                callback: v => Number(v).toLocaleString('id-ID')
+              }
+            }
+          }
+        }
+      });
+    }
+
+    function renderBrokerPills(data) {
+      const container = document.getElementById('broker-pills-container');
+      container.innerHTML = '';
+
+      const accCodes = data.top_accum_brokers || [];
+      const distCodes = data.top_dist_brokers || [];
+      const allCodes = Array.from(new Set([...accCodes, ...distCodes]));
+
+      allCodes.forEach(code => {
+        const isSelected = activeBrokersSet.has(code);
+        const isAcc = accCodes.includes(code);
+        const chip = document.createElement('button');
+        chip.className = `b-chip ${isSelected ? 'selected' : ''} ${isAcc ? 'acc-whale' : 'dist-retail'}`;
+        chip.innerText = `${code} ${isAcc ? '▲' : '▼'}`;
+        chip.onclick = () => {
+          if (activeBrokersSet.has(code)) {
+            activeBrokersSet.delete(code);
+          } else {
+            activeBrokersSet.add(code);
+          }
+          renderInventoryChart(inventoryRawData);
+        };
+        container.appendChild(chip);
+      });
+    }
+
+    function applyBrokerPreset(preset) {
+      document.querySelectorAll('#inv-presets button').forEach(b => b.classList.remove('active'));
+      event.target.classList.add('active');
+
+      if (!inventoryRawData) return;
+      const acc = inventoryRawData.top_accum_brokers || [];
+      const dist = inventoryRawData.top_dist_brokers || [];
+
+      activeBrokersSet.clear();
+      if (preset === 'top3') {
+        acc.slice(0, 3).forEach(c => activeBrokersSet.add(c));
+        dist.slice(0, 3).forEach(c => activeBrokersSet.add(c));
+      } else if (preset === 'top5') {
+        acc.slice(0, 5).forEach(c => activeBrokersSet.add(c));
+        dist.slice(0, 5).forEach(c => activeBrokersSet.add(c));
+      } else if (preset === 'whales') {
+        ["AK", "BK", "KZ", "ZP", "RX", "CS", "TP", "CC", "YU"].forEach(c => {
+          if (acc.includes(c) || dist.includes(c)) activeBrokersSet.add(c);
+        });
+      } else if (preset === 'retail') {
+        ["XL", "YP", "PD", "XC", "NI", "ES", "LG"].forEach(c => {
+          if (acc.includes(c) || dist.includes(c)) activeBrokersSet.add(c);
+        });
+      } else if (preset === 'all') {
+        acc.forEach(c => activeBrokersSet.add(c));
+        dist.forEach(c => activeBrokersSet.add(c));
+      }
+      renderInventoryChart(inventoryRawData);
+    }
+
+    // ── 7. BROKER CALENDAR HEATMAP ───────────────────────────────────────────
+    function switchCalendarBroker(code) {
+      currentCalBroker = code;
+      document.getElementById('cal-selected-broker').innerText = code;
+      document.querySelectorAll('#calendar-broker-tabs button').forEach(b => {
+        b.classList.toggle('active', b.innerText === code);
+      });
+
+      renderCalendarTable();
+    }
+
+    function renderCalendarTable() {
+      if (!historyRawData || !historyRawData.broker_calendar) return;
+      const tableBody = document.getElementById('calendar-table-body');
+      tableBody.innerHTML = '';
+
+      const rows = historyRawData.broker_calendar[currentCalBroker] || [];
+      rows.slice(-20).reverse().forEach(r => {
+        const isBuy = r.net_lot >= 0;
+        tableBody.innerHTML += `
+          <tr>
+            <td><b style="color: #fff;">${r.date}</b></td>
+            <td class="r" style="color: ${isBuy ? 'var(--green)' : 'var(--red)'}; font-weight: 700;">${r.val_fmt}</td>
+            <td class="r"><span style="font-size: 9px; padding: 1px 5px; border: 1px solid ${isBuy ? 'var(--green)' : 'var(--red)'}; color: ${isBuy ? 'var(--green)' : 'var(--red)'};">${isBuy ? 'NET BUY' : 'NET SELL'}</span></td>
+          </tr>
+        `;
+      });
+    }
+
+    // ── 8. ADAPTIVE REAL-TIME ORDERBOOK TICK ENGINE (1.2S) ───────────────────
+    let currentObState = null;
+
+    let obDepthMode = 'all';
+
+    function setObDepthMode(mode) {
+      obDepthMode = mode;
+      document.getElementById('btn-ob-depth-all').classList.toggle('active', mode === 'all');
+      document.getElementById('btn-ob-depth-l1').classList.toggle('active', mode === 'l1');
+      document.getElementById('btn-ob-depth-all').style.background = mode === 'all' ? 'var(--line)' : 'transparent';
+      document.getElementById('btn-ob-depth-all').style.color = mode === 'all' ? '#fff' : 'var(--dim)';
+      document.getElementById('btn-ob-depth-l1').style.background = mode === 'l1' ? 'var(--line)' : 'transparent';
+      document.getElementById('btn-ob-depth-l1').style.color = mode === 'l1' ? '#fff' : 'var(--dim)';
+      updateOrderbookDOM();
+    }
+
+    function renderOrderbookStatic(ob) {
+      currentObState = JSON.parse(JSON.stringify(ob));
+      
+      const warnEl = document.getElementById('ob-unverified-warning');
+      if (warnEl) {
+        if (ob.is_verified === false) {
+          warnEl.style.display = 'block';
+          warnEl.innerHTML = ob.accuracy_warning || '⚠️ <b>PERINGATAN AKURASI:</b> Antrian Level-2 disamarkan oleh BEI untuk feed publik gratis. Kedalaman 15-level ini adalah estimasi matematis dan MUNGKIN TIDAK AKURAT pada saham small-cap. Hubungkan Stockbit Token di <b>SETTINGS [⚙️]</b> untuk feed ITCH resmi bursa.';
+        } else {
+          warnEl.style.display = 'none';
+        }
+      }
+
+      updateOrderbookDOM();
+      renderRecentTrades(ob.recent_trades || []);
+    }
+
+    function renderRecentTrades(trades) {
+      const tape = document.getElementById('running-tape');
+      tape.innerHTML = '';
+      if (!trades || trades.length === 0) {
+        tape.innerHTML = '<div style="padding: 10px; color: var(--dim); text-align: center;">TIDAK ADA TRANSAKSI BARU</div>';
+        return;
+      }
+      trades.forEach(t => {
+        const isBuy = t.type === 'BUY';
+        tape.innerHTML += `
+          <div class="tape-item">
+            <span style="color: var(--dim);">${t.time}</span>
+            <span style="font-weight: 700; color: ${isBuy ? 'var(--green)' : 'var(--red)'};">${t.type}</span>
+            <span style="color: #fff;">${Number(t.price).toLocaleString('id-ID')}</span>
+            <span>${Number(t.lot).toLocaleString()} lot</span>
+            <span style="color: var(--cyan); font-weight: 700;">${t.broker}</span>
+          </div>
+        `;
+      });
+    }
+
+    function updateOrderbookDOM() {
+      if (!currentObState) return;
+
+      const bids = currentObState.bids || [];
+      const offers = currentObState.offers || [];
+
+      const totalBid = bids.reduce((sum, b) => sum + b.volume, 0);
+      const totalOffer = offers.reduce((sum, o) => sum + o.volume, 0);
+      const total = Math.max(1, totalBid + totalOffer);
+
+      const bidPct = ((totalBid / total) * 100).toFixed(1);
+      const offerPct = (100 - bidPct).toFixed(1);
+
+      document.getElementById('ob-bid-ratio').innerText = `BID: ${bidPct}% (${totalBid.toLocaleString()} lot)`;
+      document.getElementById('ob-offer-ratio').innerText = `OFFER: ${offerPct}% (${totalOffer.toLocaleString()} lot)`;
+      document.getElementById('ob-bar-bid').style.width = `${bidPct}%`;
+      document.getElementById('ob-bar-offer').style.width = `${offerPct}%`;
+
+      const ofi = totalBid - totalOffer;
+      document.getElementById('ob-ofi-val').innerText = `OFI: ${(ofi > 0 ? '+' : '')}${ofi.toLocaleString()} LOT`;
+      document.getElementById('ob-ofi-val').style.color = ofi >= 0 ? 'var(--green)' : 'var(--red)';
+
+      const provBadge = document.getElementById('ob-provenance-badge');
+      if (provBadge && currentObState.data_provenance) {
+        if (currentObState.data_provenance === 'LIVE_STOCKBIT_FEED') {
+          provBadge.innerText = '● LIVE STOCKBIT ITCH L2 FEED (VERIFIED REAL)';
+          provBadge.style.color = 'var(--green)';
+          provBadge.style.borderColor = 'var(--green)';
+        } else {
+          provBadge.innerText = '● ESTIMATED L2 DEPTH (CONNECT STOCKBIT IN ⚙️)';
+          provBadge.style.color = 'var(--amber)';
+          provBadge.style.borderColor = 'var(--amber)';
+        }
+      }
+      const container = document.getElementById('ob-ladder-rows');
+      container.innerHTML = '';
+
+      const maxVol = Math.max(...bids.map(b => b.volume), ...offers.map(o => o.volume), 1);
+
+      const nLevels = obDepthMode === 'l1' ? 1 : Math.min(15, Math.max(bids.length, offers.length));
+      for (let i = 0; i < nLevels; i++) {
+        const b = bids[i] || { volume: 0, price: '-', orders: 0 };
+        const o = offers[i] || { volume: 0, price: '-', orders: 0 };
+
+        const bW = ((b.volume / maxVol) * 100).toFixed(0);
+        const oW = ((o.volume / maxVol) * 100).toFixed(0);
+
+        const row = document.createElement('div');
+        row.className = "ob-row";
+        row.innerHTML = `
+          <div class="ob-side bid" id="bid-cell-${i}" style="${b.is_wall ? 'background: rgba(0,245,155,0.08); border-left: 2px solid var(--green);' : ''}">
+            <div class="ob-bar" style="width: ${bW}%"></div>
+            <span style="color: var(--dim); font-size: 9px; min-width: 18px;">${b.orders > 0 ? b.orders : '-'}</span>
+            <span style="font-weight: 700; color: ${b.is_wall ? 'var(--green)' : '#fff'};">${b.volume > 0 ? b.volume.toLocaleString() : '-'}</span>
+            <span style="color: var(--green); font-weight: 700;">${b.price !== '-' ? Number(b.price).toLocaleString('id-ID') : '-'}</span>
+          </div>
+          <div class="ob-side offer" id="offer-cell-${i}" style="${o.is_wall ? 'background: rgba(255,49,49,0.08); border-right: 2px solid var(--red);' : ''}">
+            <div class="ob-bar" style="width: ${oW}%"></div>
+            <span style="color: var(--red); font-weight: 700;">${o.price !== '-' ? Number(o.price).toLocaleString('id-ID') : '-'}</span>
+            <span style="font-weight: 700; color: ${o.is_wall ? 'var(--red)' : '#fff'};">${o.volume > 0 ? o.volume.toLocaleString() : '-'}</span>
+            <span style="color: var(--dim); font-size: 9px; min-width: 18px; text-align: right;">${o.orders > 0 ? o.orders : '-'}</span>
+          </div>
+        `;
+        container.appendChild(row);
+      }
+
+      if (obDepthMode === 'l1') {
+        const notice = document.createElement('div');
+        notice.style = "text-align: center; padding: 12px; color: var(--dim); font-size: 10px; border: 1px dashed var(--line-2); margin-top: 6px;";
+        notice.innerText = "TINGKAT 2–15 DISEMBUNYIKAN (HANYA LEVEL 1 RESMI BURSA DITAMPILKAN // NO MADE UP DATA)";
+        container.appendChild(notice);
+      }
+    }
+
+    // ── 8B. LIVE AUTO-REFRESH ENGINE (5 SECONDS POLL — NO DELAY, NO SIMULATION)
+    setInterval(async () => {
+      try {
+        const [rStock, rOb] = await Promise.all([
+          fetch(`/api/stock/${currentTicker}`),
+          fetch(`/api/orderbook/${currentTicker}`)
+        ]);
+        if (rStock.ok && rOb.ok) {
+          const stock = await rStock.json();
+          const ob = await rOb.json();
+
+          document.getElementById('h-price').innerText = Number(stock.price).toLocaleString('id-ID');
+          document.getElementById('h-chg').innerText = `${stock.change >= 0 ? '▲ +' : '▼ '}${stock.change} (${stock.change_pct >= 0 ? '+' : ''}${stock.change_pct}%)`;
+          document.getElementById('h-chg').style.color = stock.change >= 0 ? 'var(--green)' : 'var(--red)';
+          document.getElementById('h-val').innerText = (stock.value_idr / 1e9).toFixed(2) + " M";
+          document.getElementById('h-vol').innerText = (stock.volume_lot / 1e3).toFixed(2) + " K LOT";
+
+          renderOrderbookStatic(ob);
+        }
+      } catch (err) {
+        // Silent catch
+      }
+    }, 5000);
+
+    // ── 9. DATA INGESTION ────────────────────────────────────────────────────
+    async function loadTicker() {
+      const sym = document.getElementById('ticker-input').value.trim().toUpperCase();
+      if (!sym) return;
+      currentTicker = sym;
+      await fetchAllData();
+    }
+
+    function setTicker(sym) {
+      document.getElementById('ticker-input').value = sym;
+      document.querySelectorAll('.ticker-presets button').forEach(b => {
+        b.classList.toggle('active', b.innerText === sym);
+      });
+      loadTicker();
+    }
+
+    function showScanning(sym) {
+      const ov = document.getElementById('scan-overlay');
+      if (ov) {
+        document.getElementById('scan-ticker-disp').innerText = `SCANNING // ${sym}...`;
+        ov.classList.add('active');
+      }
+    }
+
+    function hideScanning() {
+      const ov = document.getElementById('scan-overlay');
+      if (ov) {
+        ov.classList.remove('active');
+      }
+    }
+
+    async function fetchAllData() {
+      showScanning(currentTicker);
+      initTradingView(currentTicker);
+
+      // 1. Stock Overview
+      fetch(`/api/stock/${currentTicker}`)
+        .then(r => r.json())
+        .then(stock => {
+          hideScanning();
+          document.getElementById('h-tick').innerText = stock.ticker;
+          document.getElementById('h-name').innerText = `${stock.name} — Emiten Tercatat IDX`;
+          document.getElementById('h-price').innerText = Number(stock.price).toLocaleString('id-ID');
+          document.getElementById('h-chg').innerText = `${stock.change >= 0 ? '▲ +' : '▼ '}${stock.change} (${stock.change_pct >= 0 ? '+' : ''}${stock.change_pct}%)`;
+          document.getElementById('h-chg').style.color = stock.change >= 0 ? 'var(--green)' : 'var(--red)';
+          document.getElementById('h-val').innerText = (stock.value_idr / 1e9).toFixed(2) + " M";
+          document.getElementById('h-vol').innerText = (stock.volume_lot / 1e3).toFixed(2) + " K LOT";
+        })
+        .catch(e => {
+          hideScanning();
+          console.error("Stock fetch error:", e);
+        });
+
+      // 2. Broker Summary
+      fetch(`/api/broksum/${currentTicker}`)
+        .then(r => r.json())
+        .then(brok => renderBrokSumTables(brok))
+        .catch(e => console.error("Broksum fetch error:", e));
+
+      // 3. Quantitative Risk Metrics & Monte Carlo
+      fetch(`/api/quant/${currentTicker}`)
+        .then(r => r.json())
+        .then(quant => renderQuantMetrics(quant))
+        .catch(e => console.error("Quant fetch error:", e));
+
+      // 4. Multi-Broker Inventory Series
+      fetch(`/api/inventory/${currentTicker}`)
+        .then(r => r.json())
+        .then(inv => renderInventoryChart(inv))
+        .catch(e => console.error("Inventory fetch error:", e));
+
+      // 5. Orderbook Depth of Market (DOM)
+      fetch(`/api/orderbook/${currentTicker}`)
+        .then(r => r.json())
+        .then(ob => renderOrderbookStatic(ob))
+        .catch(e => console.error("Orderbook fetch error:", e));
+
+      // 6. Corporate Profile & Shareholders
+      fetch(`/api/profile/${currentTicker}`)
+        .then(r => r.json())
+        .then(prof => renderProfileAndShareholders(prof))
+        .catch(e => console.error("Profile fetch error:", e));
+
+      // 7. Real News & Disclosures
+      fetch(`/api/news/${currentTicker}`)
+        .then(r => r.json())
+        .then(news => renderNews(news))
+        .catch(e => console.error("News fetch error:", e));
+
+      // 8. Transaction Flow & History Ledger
+      fetch(`/api/history/${currentTicker}`)
+        .then(r => r.json())
+        .then(hist => {
+          historyRawData = hist;
+          renderTransactionLedger(hist.ledger);
+          renderCalendarTable();
+        })
+        .catch(e => console.error("History fetch error:", e));
+
+      // 9. DeepSeek AI Memo
+      triggerAI();
+    }
+
+    function renderBrokSumTables(brok) {
+      const bTable = document.getElementById('broksum-buyers-table');
+      const sTable = document.getElementById('broksum-sellers-table');
+      bTable.innerHTML = '';
+      sTable.innerHTML = '';
+
+      (brok.buyers || []).slice(0, 10).forEach(b => {
+        bTable.innerHTML += `
+          <tr>
+            <td><b style="color: var(--green);">${b.broker_code}</b> <span style="font-size: 8.5px; color: var(--dim);">${b.broker_name.slice(0, 8)}</span></td>
+            <td class="r">${Number(b.net_lot).toLocaleString()}</td>
+            <td class="r" style="color: var(--dim);">@${b.avg_price}</td>
+          </tr>
+        `;
+      });
+
+      (brok.sellers || []).slice(0, 10).forEach(s => {
+        sTable.innerHTML += `
+          <tr>
+            <td><b style="color: var(--red);">${s.broker_code}</b> <span style="font-size: 8.5px; color: var(--dim);">${s.broker_name.slice(0, 8)}</span></td>
+            <td class="r">${Number(s.net_lot).toLocaleString()}</td>
+            <td class="r" style="color: var(--dim);">@${s.avg_price}</td>
+          </tr>
+        `;
+      });
+
+      const det = brok.bandar_detector || {};
+      const fl = brok.flows || {};
+      document.getElementById('h-tag-bandar').innerText = det.badge || "NEUTRAL";
+      document.getElementById('h-tag-foreign').innerText = fl.foreign_sentiment || "FOREIGN NEUTRAL";
+      document.getElementById('h-tag-retail').innerText = fl.retail_sentiment || "RITEL NEUTRAL";
+    }
+
+    let mcChartInstance = null;
+    let ddChartInstance = null;
+
+    function renderQuantMetrics(q) {
+      const m = q.metrics || {};
+      const mc = m.monte_carlo || {};
+      const bq = q.bandarmology_quant || {};
+
+      // 1. Provenance strip
+      document.getElementById('pv-vol').innerText = `${m.annualized_volatility_pct || 0}%`;
+      document.getElementById('pv-var').innerText = `${m.var_95_daily_pct || 0}%`;
+      document.getElementById('pv-sharpe').innerText = `${m.sharpe_ratio || 0}`;
+      document.getElementById('pv-mdd').innerText = `${m.max_drawdown_pct || 0}%`;
+      document.getElementById('pv-hhi').innerText = `${bq.hhi_concentration || 0} (${bq.hhi_rating || '-'})`;
+      document.getElementById('pv-mc').innerText = `${mc.p_profit_pct || 0}%`;
+
+      // 2. Monte Carlo Panel Numbers
+      const pBadge = document.getElementById('mc-prob-badge');
+      if (pBadge) pBadge.innerText = `PROFIT PROB: ${mc.p_profit_pct || 0}%`;
+      const elP50 = document.getElementById('mc-val-p50');
+      if (elP50) elP50.innerText = `Rp ${Number(mc.expected_median_price || 0).toLocaleString('id-ID')}`;
+      const elP90 = document.getElementById('mc-val-p90');
+      if (elP90) elP90.innerText = `Rp ${Number(mc.bullish_p90_price || 0).toLocaleString('id-ID')}`;
+      const elP10 = document.getElementById('mc-val-p10');
+      if (elP10) elP10.innerText = `Rp ${Number(mc.bearish_p10_price || 0).toLocaleString('id-ID')}`;
+      const elMean = document.getElementById('mc-val-mean');
+      if (elMean) elMean.innerText = `${(mc.mean_return_pct >= 0 ? '+' : '')}${mc.mean_return_pct || 0}%`;
+
+      // 3. Drawdown Panel Numbers
+      const ddBadge = document.getElementById('dd-max-badge');
+      if (ddBadge) ddBadge.innerText = `MAX DD: -${m.max_drawdown_pct || 0}%`;
+      const elVar95 = document.getElementById('dd-val-var95');
+      if (elVar95) elVar95.innerText = `${m.var_95_daily_pct || 0}%`;
+      const elVar99 = document.getElementById('dd-val-var99');
+      if (elVar99) elVar99.innerText = `${m.var_99_daily_pct || 0}%`;
+      const elCvar = document.getElementById('dd-val-cvar');
+      if (elCvar) elCvar.innerText = `${m.cvar_95_daily_pct || 0}%`;
+      const elSharpe = document.getElementById('dd-val-sharpe');
+      if (elSharpe) elSharpe.innerText = `${m.sharpe_ratio || 0}`;
+
+      // 4. Render Charts
+      renderMonteCarloChart(mc);
+      renderDrawdownChart(m);
+    }
+
+    function renderMonteCarloChart(mc) {
+      const canvas = document.getElementById('mc_chart_canvas');
+      if (!canvas) return;
+      if (mcChartInstance) mcChartInstance.destroy();
+
+      const days = mc.days || Array.from({length: 30}, (_, i) => i + 1);
+      const p90 = mc.path_p90 || [];
+      const p50 = mc.path_p50 || [];
+      const p10 = mc.path_p10 || [];
+
+      mcChartInstance = new Chart(canvas.getContext('2d'), {
+        type: 'line',
+        data: {
+          labels: days.map(d => `H+${d}`),
+          datasets: [
+            { label: 'Bullish (90th)', data: p90, borderColor: '#00f59b', borderWidth: 1.5, pointRadius: 0, tension: 0.2 },
+            { label: 'Expected Median (50th)', data: p50, borderColor: '#00d2ff', borderWidth: 2, pointRadius: 0, tension: 0.2 },
+            { label: 'Bearish (10th)', data: p10, borderColor: '#ff3131', borderWidth: 1.5, pointRadius: 0, tension: 0.2 }
+          ]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          interaction: { mode: 'index', intersect: false },
+          plugins: { legend: { display: false } },
+          scales: {
+            x: { grid: { color: '#141414' }, ticks: { color: '#666', font: { family: 'IBM Plex Mono', size: 9 }, maxTicksLimit: 6 } },
+            y: { grid: { color: '#141414' }, ticks: { color: '#888', font: { family: 'IBM Plex Mono', size: 9 }, callback: v => Number(v).toLocaleString('id-ID') } }
+          }
+        }
+      });
+    }
+
+    function renderDrawdownChart(m) {
+      const canvas = document.getElementById('dd_chart_canvas');
+      if (!canvas) return;
+      if (ddChartInstance) ddChartInstance.destroy();
+
+      const dates = m.drawdown_dates || [];
+      const series = m.drawdown_series || [];
+
+      ddChartInstance = new Chart(canvas.getContext('2d'), {
+        type: 'line',
+        data: {
+          labels: dates,
+          datasets: [
+            {
+              label: 'Drawdown (%)',
+              data: series,
+              borderColor: '#ff3131',
+              backgroundColor: 'rgba(255, 49, 49, 0.12)',
+              fill: true,
+              borderWidth: 1.5,
+              pointRadius: 0,
+              tension: 0.1
+            }
+          ]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          interaction: { mode: 'index', intersect: false },
+          plugins: { legend: { display: false } },
+          scales: {
+            x: { grid: { color: '#141414' }, ticks: { color: '#666', font: { family: 'IBM Plex Mono', size: 9 }, maxTicksLimit: 6 } },
+            y: { grid: { color: '#141414' }, ticks: { color: '#ff3131', font: { family: 'IBM Plex Mono', size: 9 }, callback: v => `${v}%` } }
+          }
+        }
+      });
+    }
+
+    function renderProfileAndShareholders(prof) {
+      const shBody = document.getElementById('shareholder-table-body');
+      if (!shBody) return;
+      shBody.innerHTML = '';
+
+      const shList = prof.shareholders || [];
+      if (shList.length === 0) {
+        shBody.innerHTML = '<tr><td colspan="6" style="padding: 12px; text-align: center; color: var(--dim);">DATA KEPEMILIKAN SAHAM TIDAK TERSEDIA</td></tr>';
+      }
+
+      shList.forEach(sh => {
+        const isPSP = sh.status === "PSP";
+        const cm = String(sh.change_mom || 'Tetap');
+        const cmColor = cm.includes('+') ? 'var(--green)' : (cm.includes('-') ? 'var(--red)' : 'var(--dim)');
+        const pct = (sh.pct != null ? Number(sh.pct).toFixed(2) : '0.00');
+        const shares = Number(sh.shares || 0).toLocaleString('id-ID');
+
+        shBody.innerHTML += `
+          <tr>
+            <td><b style="color: #fff;">${sh.holder || '-'}</b></td>
+            <td style="color: var(--dim); font-size: 9.5px;">${sh.category || '-'}</td>
+            <td class="r" style="font-weight: 600;">${shares}</td>
+            <td class="r"><b style="color: var(--green);">${pct}%</b></td>
+            <td><span style="font-size: 9px; padding: 2px 5px; border: 1px solid ${isPSP ? 'var(--green)' : 'var(--line-2)'}; color: ${isPSP ? 'var(--green)' : 'var(--dim)'};">${sh.status || 'Non-PSP'}</span></td>
+            <td style="color: ${cmColor}; font-weight: 600;">${cm}</td>
+          </tr>
+        `;
+      });
+
+      const bBody = document.getElementById('board-table-body');
+      if (!bBody) return;
+      bBody.innerHTML = '';
+
+      const commList = prof.commissioners || [];
+      const dirList = prof.directors || [];
+      if (commList.length === 0 && dirList.length === 0) {
+        bBody.innerHTML = '<tr><td colspan="3" style="padding: 12px; text-align: center; color: var(--dim);">DATA DIREKSI TIDAK TERSEDIA</td></tr>';
+      }
+
+      commList.forEach(c => {
+        bBody.innerHTML += `
+          <tr>
+            <td style="color: var(--cyan); font-weight: 600;">${c.role || 'Komisaris'}</td>
+            <td><b style="color: #fff;">${c.name || '-'}</b></td>
+            <td style="color: var(--dim);">Dewan Komisaris</td>
+          </tr>
+        `;
+      });
+      dirList.forEach(d => {
+        bBody.innerHTML += `
+          <tr>
+            <td style="color: var(--green); font-weight: 600;">${d.role || 'Direktur'}</td>
+            <td><b style="color: #fff;">${d.name || '-'}</b></td>
+            <td style="color: var(--dim);">Direksi Eksekutif</td>
+          </tr>
+        `;
+      });
+    }
+
+    function renderNews(news) {
+      const container = document.getElementById('news-container');
+      container.innerHTML = '';
+      (news || []).forEach(n => {
+        const isBull = n.sentiment === "BULLISH";
+        const isRisk = n.sentiment === "RISK";
+        const badgeColor = isBull ? 'var(--green)' : (isRisk ? 'var(--red)' : 'var(--amber)');
+
+        container.innerHTML += `
+          <div class="news-item">
+            <div class="news-meta">
+              <span>${n.source} · ${n.time_ago}</span>
+              <span style="color: ${badgeColor}; font-weight: 700; border: 1px solid ${badgeColor}; padding: 1px 4px;">${n.category}</span>
+            </div>
+            <div class="news-ttl">${n.headline}</div>
+            <div class="news-sum">${n.summary}</div>
+          </div>
+        `;
+      });
+    }
+
+    function renderTransactionLedger(ledger) {
+      const tbody = document.getElementById('transaction-ledger-body');
+      tbody.innerHTML = '';
+
+      (ledger || []).forEach(row => {
+        const isUp = row.change_pct >= 0;
+        const bPos = row.bandar_net_idr >= 0;
+        const fPos = row.foreign_net_idr >= 0;
+        const rPos = row.retail_net_idr >= 0;
+
+        tbody.innerHTML += `
+          <tr>
+            <td><b style="color: #fff;">${row.date}</b></td>
+            <td class="r" style="font-weight: 600;">${Number(row.close).toLocaleString('id-ID')}</td>
+            <td class="r" style="color: ${isUp ? 'var(--green)' : 'var(--red)'}; font-weight: 700;">${isUp ? '+' : ''}${row.change_pct}%</td>
+            <td class="r">${Number(row.volume_lot).toLocaleString()}</td>
+            <td class="r" style="color: #fff; font-weight: 600;">${row.value_fmt}</td>
+            <td class="r" style="color: ${bPos ? 'var(--green)' : 'var(--red)'}; font-weight: 700;">${row.bandar_net_fmt}</td>
+            <td class="r" style="color: ${fPos ? 'var(--cyan)' : 'var(--red)'}; font-weight: 700;">${row.foreign_net_fmt}</td>
+            <td class="r" style="color: ${rPos ? 'var(--amber)' : 'var(--dim)'}; font-weight: 700;">${row.retail_net_fmt}</td>
+            <td><b style="color: var(--green);">${row.top_buyer}</b></td>
+            <td><b style="color: var(--red);">${row.top_seller}</b></td>
+            <td><span style="font-size: 8.5px; padding: 1px 4px; border: 1px solid var(--line-2); color: var(--dim);">${row.regime}</span></td>
+          </tr>
+        `;
+      });
+    }
+
+    async function triggerAI() {
+      const el = document.getElementById('ai-narrative-text');
+      el.innerText = "Memproses struktur pasar & bandarmology via DeepSeek AI...";
+      try {
+        const r = await fetch(`/api/analyze/${currentTicker}`, { method: 'POST' });
+        const ai = await r.json();
+
+        document.getElementById('ai-phase-badge').innerText = `FASE: ${ai.phase || 'AKUMULASI'}`;
+        document.getElementById('ai-action-recommendation').innerText = `REKOMENDASI: ${ai.action || 'BUY ON WEAKNESS'}`;
+        document.getElementById('ai-support-val').innerText = Number(ai.support_level || 0).toLocaleString('id-ID');
+        document.getElementById('ai-resistance-val').innerText = Number(ai.resistance_level || 0).toLocaleString('id-ID');
+        document.getElementById('ai-invalidation-val').innerText = Number(ai.invalidation_level || 0).toLocaleString('id-ID');
+        el.innerText = ai.narrative || ai.strategic_verdict || "Analisa selesai.";
+      } catch (e) {
+        el.innerText = "DeepSeek AI Offline. Menampilkan data kuantitatif.";
+      }
+    }
+
+    function reanalyzeAI() {
+      triggerAI();
+    }
+
+    function switchInfoTab(tab) {
+      document.getElementById('btn-tab-sh').classList.toggle('active', tab === 'shareholders');
+      document.getElementById('btn-tab-news').classList.toggle('active', tab === 'news');
+      document.getElementById('btn-tab-board').classList.toggle('active', tab === 'board');
+
+      document.getElementById('tab-sh-view').style.display = tab === 'shareholders' ? 'block' : 'none';
+      document.getElementById('tab-news-view').style.display = tab === 'news' ? 'block' : 'none';
+      document.getElementById('tab-board-view').style.display = tab === 'board' ? 'block' : 'none';
+    }
+
+    // Auto-boot
+    window.addEventListener('DOMContentLoaded', () => {
+      fetchAllData();
+    });
+  </script>
+  <!-- BRUTALIST SETTINGS MODAL -->
+  <div id="settings-modal" style="display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.85); z-index: 999; align-items: center; justify-content: center; padding: 20px;">
+    <div style="background: #050505; border: 1px solid var(--line-2); max-width: 520px; width: 100%; padding: 24px; box-shadow: 0 0 40px rgba(0,0,0,0.9);">
+      <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--line); padding-bottom: 12px; margin-bottom: 16px;">
+        <h3 style="font-size: 13px; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; color: #fff;">
+          TERMINAL CONFIGURATION &amp; DATA FEEDS
+        </h3>
+        <button onclick="toggleSettingsModal()" style="color: var(--dim); font-size: 14px; font-weight: 700;">✕</button>
+      </div>
+
+      <div style="display: flex; flex-direction: column; gap: 16px; font-size: 11px;">
+        <div>
+          <label style="color: var(--dim); display: block; font-size: 10px; letter-spacing: .12em; text-transform: uppercase; margin-bottom: 6px;">
+            STOCKBIT BEARER TOKEN (LIVE L2 ORDERBOOK UNTUK SMALL-CAP)
+          </label>
+          <input 
+            id="cfg-stockbit-token" 
+            type="password" 
+            placeholder="Paste JWT: eyJhbGci..." 
+            style="width: 100%; padding: 8px 10px; border: 1px solid var(--line-2); background: #000; color: #fff; font-family: var(--mono); font-size: 11px;"
+          />
+          <div style="font-size: 9.5px; color: var(--dim); margin-top: 6px; line-height: 1.5;">
+            💡 <b>Cara ambil token dari browser:</b> Buka <span style="color: var(--cyan);">stockbit.com</span> -> Tekan F12 -> Network tab -> Klik saham apa saja -> Copy isi header <span style="color: var(--accent);">Authorization: Bearer &lt;token&gt;</span>.
+          </div>
+        </div>
+
+        <div>
+          <label style="color: var(--dim); display: block; font-size: 10px; letter-spacing: .12em; text-transform: uppercase; margin-bottom: 6px;">
+            DEEPSEEK API KEY
+          </label>
+          <input 
+            id="cfg-deepseek-key" 
+            type="password" 
+            placeholder="sk-..." 
+            value=""
+            style="width: 100%; padding: 8px 10px; border: 1px solid var(--line-2); background: #000; color: #fff; font-family: var(--mono); font-size: 11px;"
+          />
+        </div>
+
+        <div style="display: flex; justify-content: flex-end; gap: 8px; border-top: 1px solid var(--line); padding-top: 14px;">
+          <button onclick="toggleSettingsModal()" style="padding: 8px 14px; border: 1px solid var(--line-2); color: var(--dim);">BATAL</button>
+          <button onclick="saveTerminalSettings()" class="run-btn" style="height: auto; padding: 8px 18px;">SIMPAN PENGATURAN</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    function toggleSettingsModal() {
+      const m = document.getElementById('settings-modal');
+      m.style.display = m.style.display === 'flex' ? 'none' : 'flex';
+    }
+
+    async function saveTerminalSettings() {
+      const sToken = document.getElementById('cfg-stockbit-token').value.trim();
+      const dKey = document.getElementById('cfg-deepseek-key').value.trim();
+
+      if (sToken) {
+        await fetch('/api/settings/stockbit-token', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ token: sToken })
+        });
+      }
+      if (dKey) {
+        await fetch('/api/settings/key', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ api_key: dKey })
+        });
+      }
+      alert('Pengaturan tersimpan! Memuat ulang feed bursa...');
+      toggleSettingsModal();
+      fetchAllData();
+    }
+  </script>
+</body>
+</html>
