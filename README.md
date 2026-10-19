@@ -4,6 +4,8 @@ QUANT.IDX is an open-access quantitative finance terminal designed for Indonesia
 
 The backend runs on Python (FastAPI, NumPy, Pandas) and ingests live market data for all `.JK` tickers. The frontend is built on a high-density brutalist user interface with Chart.js canvas rendering and TradingView Pro technical charting.
 
+Live Web Deployment: [https://quantidx.vercel.app](https://quantidx.vercel.app)
+
 ---
 
 ## 1. System Architecture
