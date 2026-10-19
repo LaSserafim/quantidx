@@ -40,12 +40,14 @@ app.add_middleware(
 )
 
 FRONTEND_DIR = BASE_DIR / "frontend"
+FRONTEND_HTML = FRONTEND_DIR / "index.html"
 
 class KeyUpdateRequest(BaseModel):
     api_key: str
 
 # ── REST API Endpoints ────────────────────────────────────────────────────────
 
+@app.get("/health")
 @app.get("/api/health")
 def get_health():
     """Health check endpoint and system status."""
@@ -198,11 +200,17 @@ def update_key(req: KeyUpdateRequest):
 
 @app.get("/", response_class=HTMLResponse)
 def serve_index():
-    index_file = FRONTEND_DIR / "index.html"
-    if not index_file.exists():
-        raise HTTPException(status_code=404, detail="frontend/index.html not found.")
-    with open(index_file, "r", encoding="utf-8") as f:
-        return HTMLResponse(content=f.read())
+    candidates = [
+        FRONTEND_HTML,
+        pathlib.Path("frontend/index.html"),
+        pathlib.Path("index.html"),
+        pathlib.Path(__file__).resolve().parent.parent / "frontend" / "index.html",
+        pathlib.Path(__file__).resolve().parent / "index.html"
+    ]
+    for c in candidates:
+        if c.exists():
+            return HTMLResponse(content=c.read_text(encoding="utf-8"))
+    raise HTTPException(status_code=404, detail="frontend/index.html not found.")
 
 if __name__ == "__main__":
     import uvicorn
